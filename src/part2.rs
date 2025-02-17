@@ -1,5 +1,48 @@
 use std::{cell::RefCell, rc::Rc};
 
+pub fn solve_max_avg_subarray_643(values: &[i32], k: usize) -> f64 {
+    let ranges = 0..=values.len() - k;
+    let mut ranges = ranges.map(|start| start..start + k);
+    // Unwrap is safe because our ranges are calculated correctly
+
+    let mut prev_sum = {
+        ranges
+            .by_ref()
+            .next()
+            .map(|r| values.get(r).unwrap())
+            .map(|v| v.iter().sum::<i32>())
+            .unwrap_or(0)
+    };
+    let mut max = prev_sum as f64 / k as f64;
+
+    for r in ranges {
+        // just subtract the previous and add the next
+        prev_sum = prev_sum - values[r.start - 1] + values[r.end - 1];
+        let this_avg = prev_sum as f64 / k as f64;
+        if this_avg > max {
+            max = this_avg
+        }
+    }
+    max
+}
+
+pub fn solve_max_avg_subarray_643_slower(values: &[i32], k: usize) -> f64 {
+    let ranges = 0..=values.len() - k;
+    let ranges = ranges.map(|start| start..start + k);
+    // Unwrap is safe because our ranges are calculated correctly
+    let values = ranges.map(|range| values.get(range).unwrap());
+    let averages = values.map(|v| v.iter().sum::<i32>() as f64 / v.len() as f64);
+    averages
+        .max_by(|a, b| {
+            if a > b {
+                std::cmp::Ordering::Greater
+            } else {
+                std::cmp::Ordering::Less
+            }
+        })
+        .unwrap_or(0.0)
+}
+
 pub fn solve_is_subsequence_392_iterator(
     mut s: impl Iterator<Item = char>,
     mut t: impl Iterator<Item = char>,
@@ -214,6 +257,18 @@ mod tests {
         assert_eq!(
             false,
             solve_is_subsequence_392_iterator("axc".chars(), "ahbgdc".chars())
+        );
+    }
+
+    #[test]
+    fn test_max_avg_subarray_643() {
+        assert!(
+            (12.75000 - solve_max_avg_subarray_643(&[1, 12, -5, -6, 50, 3], 4)).abs() < 0.00001
+        );
+        assert!(
+            (5.0 - solve_max_avg_subarray_643(&[5], 1)).abs() < 0.00001,
+            "{}",
+            solve_max_avg_subarray_643(&[5], 1)
         );
     }
 }
