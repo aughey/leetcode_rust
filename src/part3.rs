@@ -1,5 +1,43 @@
 use std::collections::{HashSet, VecDeque};
 
+// Definition for singly-linked list.
+#[derive(PartialEq, Eq, Clone, Debug)]
+pub struct ListNode {
+    pub val: i32,
+    pub next: Option<Box<ListNode>>,
+}
+
+impl ListNode {
+    #[inline]
+    fn new(val: i32) -> Self {
+        ListNode { next: None, val }
+    }
+    fn append(&mut self, val: i32) {
+        let mut next = &mut self.next;
+        while let Some(n) = next {
+            next = &mut n.next
+        }
+
+        let new_node = ListNode::new(val);
+        next.replace(Box::new(new_node));
+    }
+    pub fn extend(&mut self, values: impl IntoIterator<Item = i32>) {
+        for v in values {
+            self.append(v);
+        }
+    }
+    pub fn collect_vec(&self) -> Vec<i32> {
+        let mut ret = Vec::new();
+        ret.push(self.val);
+        let mut next = &self.next;
+        while let Some(n) = next {
+            ret.push(n.val);
+            next = &n.next
+        }
+        ret
+    }
+}
+
 pub struct RecentCounter {
     times: VecDeque<i32>,
 }
@@ -84,5 +122,15 @@ mod tests {
         assert_eq!(2, rc.ping(100));
         assert_eq!(3, rc.ping(3001));
         assert_eq!(3, rc.ping(3002));
+    }
+
+    #[test]
+    fn test_ll_2095() {
+        let orig = [1, 3, 4, 7, 1, 2, 6];
+        let mut ll = orig.into_iter();
+        let mut head = ListNode::new(ll.next().unwrap());
+        head.extend(ll);
+
+        assert_eq!(orig.to_vec(), head.collect_vec());
     }
 }
