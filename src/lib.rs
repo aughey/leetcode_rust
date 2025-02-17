@@ -1,5 +1,14 @@
 use std::{cell::RefCell, iter::from_fn};
 
+pub fn solve_kids_candies_1431(candies: &[u32], extra_candies: u32) -> Vec<bool> {
+    let previous_greatest = candies.iter().max().copied().unwrap_or(0);
+
+    candies
+        .iter()
+        .map(|c| (c + extra_candies) >= previous_greatest)
+        .collect()
+}
+
 fn str_divids(t_in: &str, s: &str) -> bool {
     if t_in.is_empty() {
         return true;
@@ -168,5 +177,21 @@ mod tests {
         assert_eq!(Some("ABC"), solve_gcd_strings_1070_rev("ABCABC", "ABC"));
         assert_eq!(Some("AB"), solve_gcd_strings_1070_rev("ABABAB", "ABAB"));
         assert_eq!(None, solve_gcd_strings_1070_rev("LEET", "CODE"));
+    }
+
+    #[test]
+    fn test_kids_candies_1431() {
+        assert_eq!(
+            vec![true, true, true, false, true],
+            solve_kids_candies_1431(&[2, 3, 5, 1, 3], 3)
+        );
+        assert_eq!(
+            vec![true, false, false, false, false],
+            solve_kids_candies_1431(&[4, 2, 1, 1, 2], 1)
+        );
+        assert_eq!(
+            vec![true, false, true],
+            solve_kids_candies_1431(&[12, 1, 12], 10)
+        );
     }
 }
