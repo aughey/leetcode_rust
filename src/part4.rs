@@ -1,30 +1,35 @@
-use std::{cell::RefCell, collections::HashSet, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::{HashMap, HashSet},
+    rc::Rc,
+};
 
 fn on_edge(maze_height: usize, maze_width: usize, y: usize, x: usize) -> bool {
     x == 0 || x == maze_width - 1 || y == 0 || y == maze_height - 1
 }
 
-pub fn solve_nearest_exit(
+pub fn solve_nearest_exit(maze: &[impl AsRef<[char]>], [y, x]: [usize; 2]) -> Option<usize> {
+    let mut distances = HashMap::new();
+    search_nearest_exit(maze, [y, x], &mut distances);
+    distances.get(&(y, x)).unwrap().clone()
+}
+
+fn search_nearest_exit(
     maze: &[impl AsRef<[char]>],
     [y, x]: [usize; 2],
-    visited: &mut HashSet<(usize, usize)>,
-    min_found: &mut Option<i32>,
-) -> Option<i32> {
-    if visited.contains(&(y, x)) {
-        return None;
-    }
-    // Early break if we're greater than the min depth already.
-    if let Some(min_found) = min_found {
-        if visited.len() >= *min_found as usize {
-            return None;
-        }
+    distance_to_edge: &mut HashMap<(usize, usize), Option<usize>>,
+) -> Option<usize> {
+    if let Some(dist) = distance_to_edge.get(&(y, x)) {
+        return dist.clone();
     }
     //println!("visiting: {y} {x}");
-    if !visited.is_empty() && on_edge(maze.len(), maze[y].as_ref().len(), y, x) {
+    if !distance_to_edge.is_empty() && on_edge(maze.len(), maze[y].as_ref().len(), y, x) {
         //   println!("Found exit: {y} {x}");
+        distance_to_edge.insert((y, x), Some(0));
         return Some(0);
     }
-    visited.insert((y, x));
+    distance_to_edge.insert((y, x), None);
+
     let directions: &[(isize, isize)] = &[(-1, 0), (1, 0), (0, -1), (0, 1)];
     let valid_locations = directions.into_iter().filter_map(|d| {
         let newy = y.checked_add_signed(d.0)?;
@@ -39,22 +44,10 @@ pub fn solve_nearest_exit(
         }
     });
     let distances = valid_locations.filter_map(|(y, x)| {
-        solve_nearest_exit(maze, [y, x], visited, min_found).map(|count| count + 1)
+        search_nearest_exit(maze, [y, x], distance_to_edge).map(|count| count + 1)
     });
     let min = distances.min();
-    match (min, min_found.as_ref().copied()) {
-        (Some(min), None) => {
-            min_found.replace(min);
-        }
-        (Some(min), Some(mf)) => {
-            if min < mf {
-                min_found.replace(min);
-            }
-        }
-        _ => {}
-    }
-    // Unvisit
-    visited.remove(&(y, x));
+    distance_to_edge.insert((y, x), min);
     min
 }
 
@@ -264,12 +257,7 @@ mod tests {
 
         assert_eq!(
             Some(1),
-            solve_nearest_exit(
-                &maze,
-                [entrance[0], entrance[1]],
-                &mut Default::default(),
-                &mut None
-            )
+            solve_nearest_exit(&maze, [entrance[0], entrance[1]],)
         );
 
         let maze = [['+', '+', '+'], ['.', '.', '.'], ['+', '+', '+']];
@@ -277,12 +265,7 @@ mod tests {
 
         assert_eq!(
             Some(2),
-            solve_nearest_exit(
-                &maze,
-                [entrance[0], entrance[1]],
-                &mut Default::default(),
-                &mut None
-            )
+            solve_nearest_exit(&maze, [entrance[0], entrance[1]],)
         );
 
         let maze = [
@@ -297,12 +280,7 @@ mod tests {
 
         assert_eq!(
             Some(7),
-            solve_nearest_exit(
-                &maze,
-                [entrance[0], entrance[1]],
-                &mut Default::default(),
-                &mut None
-            )
+            solve_nearest_exit(&maze, [entrance[0], entrance[1]],)
         );
     }
 }
