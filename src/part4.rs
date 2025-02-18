@@ -8,10 +8,94 @@ fn on_edge(maze_height: usize, maze_width: usize, y: usize, x: usize) -> bool {
     x == 0 || x == maze_width - 1 || y == 0 || y == maze_height - 1
 }
 
+pub fn dijkstras<T, N>(start: T, neighbors: impl Fn(T) -> N) -> HashMap<T, usize>
+where
+    T: Eq + std::hash::Hash + Clone + std::fmt::Debug,
+    N: Iterator<Item = (T, usize)>,
+{
+    let mut weights = HashMap::<T, usize>::new();
+    let mut visited = HashSet::<T>::new();
+    let mut unvisited = HashSet::<T>::new();
+
+    let mut to_visit = Some(start.clone());
+    weights.insert(start.clone(), 0);
+
+    while let Some(node) = to_visit {
+        visited.insert(node.clone());
+        unvisited.remove(&node);
+        // update estimates
+        let cur_weight = *weights.get(&node).unwrap();
+
+        for (neighbor, cost) in neighbors(node.clone()) {
+            if !visited.contains(&neighbor) {
+                unvisited.insert(neighbor.clone());
+            }
+
+            let neighbor_weight = weights.get(&neighbor);
+            let total_cost = cost + cur_weight;
+
+            if let Some(neighbor_weight) = neighbor_weight {
+                if total_cost < *neighbor_weight {
+                    weights.insert(neighbor.clone(), total_cost);
+                }
+            } else {
+                weights.insert(neighbor.clone(), total_cost);
+            }
+        }
+
+        to_visit = unvisited
+            .iter()
+            .filter_map(|node| {
+                if let Some(weight) = weights.get(node) {
+                    Some((node, weight))
+                } else {
+                    None
+                }
+            })
+            .min_by_key(|v| v.1)
+            .map(|v| v.0.clone());
+    }
+
+    weights
+}
+
 pub fn solve_nearest_exit(maze: &[impl AsRef<[char]>], [y, x]: [usize; 2]) -> Option<usize> {
-    let mut distances = HashMap::new();
-    search_nearest_exit(maze, [y, x], &mut distances);
-    distances.get(&(y, x)).unwrap().clone()
+    let start = (y, x);
+    let weights = dijkstras((y, x), |cell| {
+        let directions: &[(isize, isize)] = &[(-1, 0), (1, 0), (0, -1), (0, 1)];
+        let valid_locations = directions.into_iter().filter_map(move |d| {
+            let newy = cell.0.checked_add_signed(d.0)?;
+            let newx = cell.1.checked_add_signed(d.1)?;
+            let cell = maze.get(newy)?.as_ref().get(newx)?;
+            if cell == &'.' {
+                Some((newy, newx))
+            } else {
+                None
+            }
+        });
+        valid_locations.map(|xy| (xy, 1))
+    });
+
+    // for (y, row) in maze.iter().enumerate() {
+    //     for (x, cell) in row.as_ref().iter().enumerate() {
+    //         print!("{cell}");
+    //     }
+    //     println!("")
+    // }
+    // for (y, row) in maze.iter().enumerate() {
+    //     for (x, cell) in row.as_ref().iter().enumerate() {
+    //         print!("{:?} ", weights.get(&(y, x)));
+    //     }
+    //     println!("")
+    // }
+
+    // Look at all the weights, and find the edge with the minimum weight
+    let edge_weights = weights
+        .iter()
+        .filter(|&(yx, _weight)| yx != &start)
+        .filter(|&(yx, _weight)| on_edge(maze.len(), maze[yx.0].as_ref().len(), yx.0, yx.1));
+    let edge_distances = edge_weights.map(|(&_xy, &weight)| weight);
+    edge_distances.min()
 }
 
 fn search_nearest_exit(
@@ -276,11 +360,30 @@ mod tests {
             ['+', '+', '+', '+', '.', '+', '.'],
         ];
         let entrance = [0, 1];
-        println!("**");
 
         assert_eq!(
             Some(7),
             solve_nearest_exit(&maze, [entrance[0], entrance[1]],)
+        );
+
+        println!("**");
+
+        let maze = [
+            ['.', '.', '.', '.', '.', '+', '.', '.', '.'],
+            ['.', '+', '.', '.', '.', '.', '.', '.', '.'],
+            ['.', '.', '+', '.', '+', '.', '+', '.', '+'],
+            ['.', '.', '.', '.', '+', '.', '.', '.', '.'],
+            ['.', '.', '.', '.', '+', '+', '.', '.', '.'],
+            ['+', '.', '.', '.', '.', '.', '.', '.', '.'],
+            ['.', '.', '.', '+', '.', '.', '.', '.', '.'],
+            ['.', '.', '.', '+', '.', '.', '.', '.', '+'],
+            ['+', '.', '.', '+', '.', '+', '+', '.', '.'],
+        ];
+        let entrance = [8, 4];
+
+        assert_eq!(
+            Some(5),
+            solve_nearest_exit(&maze, [entrance[0], entrance[1]])
         );
     }
 }
