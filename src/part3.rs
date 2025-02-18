@@ -1,5 +1,32 @@
 use std::collections::{HashSet, VecDeque};
 
+fn ll_len(head: &ListNode) -> usize {
+    let mut len = 1;
+    let mut next = &head.next;
+    while let Some(n) = next {
+        len += 1;
+        next = &n.next;
+    }
+    len
+}
+
+pub fn solve_remove_ll_2095(mut head: Box<ListNode>) -> Option<Box<ListNode>> {
+    let len = ll_len(&head);
+    if len == 1 {
+        return None;
+    }
+    let len = len / 2 - 1;
+
+    let mut next = Some(&mut head);
+    for _ in 0..len {
+        next = next.unwrap().next.as_mut();
+    }
+
+    next.map(|n| n.next = n.next.as_mut().and_then(|n| n.next.take()));
+
+    Some(head)
+}
+
 // Definition for singly-linked list.
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct ListNode {
@@ -132,5 +159,23 @@ mod tests {
         head.extend(ll);
 
         assert_eq!(orig.to_vec(), head.collect_vec());
+
+        assert_eq!(7, ll_len(&head));
+
+        let res = solve_remove_ll_2095(Box::new(head));
+        assert_eq!(vec![1, 3, 4, 1, 2, 6], res.unwrap().collect_vec());
+
+        let mut head = ListNode::new(1);
+        head.append(2);
+        head.append(3);
+        head.append(4);
+
+        assert_eq!(vec![1, 2, 3, 4], head.collect_vec());
+
+        let head = Some(Box::new(head));
+
+        let res = solve_remove_ll_2095(head.unwrap());
+
+        assert_eq!(vec![1, 2, 4], res.unwrap().collect_vec());
     }
 }
