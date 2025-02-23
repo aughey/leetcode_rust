@@ -98,6 +98,7 @@ pub fn solve_nearest_exit(maze: &[impl AsRef<[char]>], [y, x]: [usize; 2]) -> Op
     edge_distances.min()
 }
 
+#[allow(dead_code)]
 fn search_nearest_exit(
     maze: &[impl AsRef<[char]>],
     [y, x]: [usize; 2],
